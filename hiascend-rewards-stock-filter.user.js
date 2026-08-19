@@ -1,10 +1,13 @@
 // ==UserScript==
-// @name         昇腾积分兑换中心 - 隐藏库存不足礼品
+// @name         昇腾 / 鲲鹏积分兑换中心 - 隐藏库存不足礼品
 // @namespace    https://github.com/KaranocaVe/hiascend-rewards-userscript
-// @version      1.0.0
-// @description  隐藏库存不足礼品，并让后续页的可兑换礼品自动向前补位。
+// @version      1.1.0
+// @description  同时支持昇腾社区和鲲鹏社区，隐藏库存不足礼品并让后续页自动补位。
 // @author       KaranocaVe
 // @match        https://www.hiascend.com/developer/rewards*
+// @match        https://www.hiascend.com/zh/developer/rewards*
+// @match        https://www.hikunpeng.com/developer/rewards*
+// @match        https://www.hikunpeng.com/zh/developer/rewards*
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -16,7 +19,10 @@
   if (window.__hiascendRewardsStockFilterInstalled) return;
   window.__hiascendRewardsStockFilterInstalled = true;
 
-  const LIST_PATH = '/ascendgateway/ascendservice/exchange/center/gift/list';
+  const LIST_PATHS = new Set([
+    '/ascendgateway/ascendservice/exchange/center/gift/list',
+    '/kunpenggateway/kunpengservice/exchange/center/gift/list',
+  ]);
   const CACHE_TTL_MS = 30_000;
   const nativeFetch = window.fetch.bind(window);
   let cachePromise = null;
@@ -29,7 +35,7 @@
 
   const isGiftListRequest = (input) => {
     try {
-      return getRequestUrl(input).pathname === LIST_PATH;
+      return LIST_PATHS.has(getRequestUrl(input).pathname);
     } catch (_) {
       return false;
     }
@@ -116,7 +122,7 @@
         headers,
       });
     } catch (error) {
-      console.warn('[hiascend-rewards-filter] fallback:', error);
+      console.warn('[rewards-stock-filter] fallback:', error);
       return nativeFetch(input, init);
     }
   };
