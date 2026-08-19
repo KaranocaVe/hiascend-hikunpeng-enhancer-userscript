@@ -1,6 +1,11 @@
-# 昇腾积分兑换中心库存过滤油猴脚本
+# 昇腾 / 鲲鹏积分兑换中心库存过滤油猴脚本
 
 油猴脚本：[hiascend-rewards-stock-filter.user.js](./hiascend-rewards-stock-filter.user.js)
+
+支持页面：
+
+- https://www.hiascend.com/developer/rewards
+- https://www.hikunpeng.com/developer/rewards
 
 功能：
 
