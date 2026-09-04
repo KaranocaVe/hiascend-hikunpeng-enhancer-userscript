@@ -1,4 +1,4 @@
-# 昇腾 / 鲲鹏社区增强油猴脚本
+# 昇腾 / 鲲鹏社区集成增强油猴脚本
 
 油猴脚本：[hiascend-hikunpeng-enhancer.user.js](./hiascend-hikunpeng-enhancer.user.js)
 

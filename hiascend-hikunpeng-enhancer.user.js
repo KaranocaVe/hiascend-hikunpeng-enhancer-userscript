@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         昇腾 / 鲲鹏社区增强
+// @name         昇腾 / 鲲鹏社区集成增强
 // @namespace    https://github.com/KaranocaVe/hiascend-hikunpeng-enhancer-userscript
 // @version      2.0.0
 // @description  昇腾与鲲鹏社区增强插件：库存过滤、分页补齐与比赛提交协议自动勾选。
