@@ -1,13 +1,17 @@
 // ==UserScript==
 // @name         昇腾 / 鲲鹏积分兑换中心 - 隐藏库存不足礼品
 // @namespace    https://github.com/KaranocaVe/hiascend-rewards-userscript
-// @version      1.1.0
-// @description  同时支持昇腾社区和鲲鹏社区，隐藏库存不足礼品并让后续页自动补位。
+// @version      1.2.0
+// @description  同时支持昇腾社区和鲲鹏社区，隐藏库存不足礼品、自动补齐分页，并在比赛提交页勾选协议。
 // @author       KaranocaVe
 // @match        https://www.hiascend.com/developer/rewards*
 // @match        https://www.hiascend.com/zh/developer/rewards*
 // @match        https://www.hikunpeng.com/developer/rewards*
 // @match        https://www.hikunpeng.com/zh/developer/rewards*
+// @match        https://www.hiascend.com/developer/contests/*
+// @match        https://www.hiascend.com/zh/developer/contests/*
+// @match        https://www.hikunpeng.com/developer/contests/*
+// @match        https://www.hikunpeng.com/zh/developer/contests/*
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -40,6 +44,10 @@
       return false;
     }
   };
+
+  const isRewardsPage = () => /^\/(?:zh\/)?developer\/rewards(?:\/|$)/.test(
+    location.pathname,
+  );
 
   const isSoldOutGift = (gift) => (
     String(gift?.exchangeStatus) === '1' || Number(gift?.totalNum) <= 0
@@ -78,7 +86,7 @@
     return cachePromise;
   }
 
-  window.fetch = async function filteredFetch(input, init) {
+  const filteredFetch = async function filteredFetch(input, init) {
     if (!isGiftListRequest(input)) {
       return nativeFetch(input, init);
     }
@@ -150,9 +158,127 @@
     });
   }
 
-  if (document.documentElement) {
-    startCardObserver();
-  } else {
-    document.addEventListener('DOMContentLoaded', startCardObserver, { once: true });
+  function isContestSubmitPage() {
+    return /^\/(?:zh\/)?developer\/contests\/details\/[^/]+\/submit(?:\/|$)/.test(
+      location.pathname,
+    );
   }
+
+  function isChecked(control) {
+    const input = control.matches?.('input[type="checkbox"]')
+      ? control
+      : control.querySelector?.('input[type="checkbox"]')
+        || control.closest?.('label')?.querySelector('input[type="checkbox"]');
+    if (input?.checked) return true;
+
+    return [control, control.closest?.('label'), control.parentElement]
+      .filter(Boolean)
+      .some((element) => element.getAttribute?.('aria-checked') === 'true'
+        || /(?:^|\s)(?:checked|is-checked|o-checkbox-checked)(?:\s|$)/.test(
+          String(element.className || ''),
+        ));
+  }
+
+  function findContestAgreementControl() {
+    // The current contest-submit form has a dedicated privacy box. Keeping this
+    // selector scoped to that box prevents unrelated checkboxes from being touched.
+    const scoped = document.querySelector(
+      '.submit .footer-box .privacy-box .o-checkbox',
+    );
+    if (scoped) return scoped;
+
+    // Fallback for minor markup changes: still require the checkbox to be inside
+    // the submit footer and its label to mention agreement/consent text.
+    return [...document.querySelectorAll(
+      '.submit .footer-box label, .submit .footer-box input[type="checkbox"]',
+    )].find((element) => {
+      const label = element.closest('label') || element;
+      return /协议|隐私|同意|承诺|agreement|privacy|consent/i.test(label.textContent || '');
+    }) || null;
+  }
+
+  function clickContestAgreement() {
+    if (!isContestSubmitPage()) return false;
+
+    const control = findContestAgreementControl();
+    if (!control) return false;
+    if (isChecked(control)) return true;
+
+    const input = control.matches?.('input[type="checkbox"]')
+      ? control
+      : control.querySelector?.('input[type="checkbox"]')
+        || control.closest?.('label')?.querySelector('input[type="checkbox"]');
+    if (input && !input.disabled) input.click();
+    else if (!input && typeof control.click === 'function') control.click();
+
+    return isChecked(control);
+  }
+
+  function installContestAgreementAutoCheck() {
+    let observer = null;
+    let completed = false;
+    let timer = null;
+
+    const disconnect = () => {
+      observer?.disconnect();
+      observer = null;
+      if (timer !== null) window.clearTimeout(timer);
+      timer = null;
+    };
+
+    const tryCheck = () => {
+      if (!isContestSubmitPage()) {
+        completed = false;
+        disconnect();
+        return;
+      }
+      if (completed) return;
+      if (clickContestAgreement()) {
+        completed = true;
+        disconnect();
+        console.info('[rewards-stock-filter] contest submission agreement checked.');
+      }
+    };
+
+    const observe = () => {
+      if (!document.documentElement || observer) return;
+      observer = new MutationObserver(tryCheck);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      timer = window.setTimeout(disconnect, 30_000);
+      tryCheck();
+    };
+
+    const schedule = () => {
+      completed = false;
+      disconnect();
+      window.setTimeout(observe, 0);
+    };
+
+    // Contest pages are Vue/Nuxt SPA routes. Users commonly enter /submit via
+    // history.pushState from the detail page, so a document-start-only check is
+    // insufficient.
+    for (const method of ['pushState', 'replaceState']) {
+      const original = history[method];
+      history[method] = function patchedHistoryMethod(...args) {
+        const result = original.apply(this, args);
+        schedule();
+        return result;
+      };
+    }
+    window.addEventListener('popstate', schedule);
+
+    if (document.documentElement) observe();
+    else document.addEventListener('DOMContentLoaded', observe, { once: true });
+  }
+
+  if (isRewardsPage()) {
+    window.fetch = filteredFetch;
+    if (document.documentElement) {
+      startCardObserver();
+    } else {
+      document.addEventListener('DOMContentLoaded', startCardObserver, { once: true });
+    }
+  }
+
+  installContestAgreementAutoCheck();
 })();
