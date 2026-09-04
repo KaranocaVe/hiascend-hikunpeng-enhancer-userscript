@@ -4,6 +4,8 @@
 // @version      2.0.0
 // @description  昇腾与鲲鹏社区增强插件：库存过滤、分页补齐与比赛提交协议自动勾选。
 // @author       KaranocaVe
+// @downloadURL  https://raw.githubusercontent.com/KaranocaVe/hiascend-hikunpeng-enhancer-userscript/main/hiascend-hikunpeng-enhancer.user.js
+// @updateURL    https://raw.githubusercontent.com/KaranocaVe/hiascend-hikunpeng-enhancer-userscript/main/hiascend-hikunpeng-enhancer.user.js
 // @match        https://www.hiascend.com/developer/rewards*
 // @match        https://www.hiascend.com/zh/developer/rewards*
 // @match        https://www.hikunpeng.com/developer/rewards*

@@ -2,6 +2,8 @@
 
 油猴脚本：[hiascend-hikunpeng-enhancer.user.js](./hiascend-hikunpeng-enhancer.user.js)
 
+安装地址：<https://raw.githubusercontent.com/KaranocaVe/hiascend-hikunpeng-enhancer-userscript/main/hiascend-hikunpeng-enhancer.user.js>
+
 仓库名称固定为 `hiascend-hikunpeng-enhancer-userscript`。脚本是面向昇腾社区与鲲鹏社区的集成增强插件。
 
 支持页面：
@@ -20,4 +22,4 @@
 
 比赛提交页路径为 `/developer/contests/details/<比赛 ID>/submit`（含 `/zh/` 变体）。脚本也处理从比赛详情页进入提交页时的 SPA 路由切换。
 
-安装：打开 `hiascend-hikunpeng-enhancer.user.js`，点击 Raw，然后在 Tampermonkey / Violentmonkey 中安装。
+安装：打开 `hiascend-hikunpeng-enhancer.user.js`，点击 Raw，然后在 Tampermonkey / Violentmonkey 中安装。名称已从旧的库存过滤脚本迁移，需手动安装这一次；之后会从固定的 `@updateURL` 自动更新。
