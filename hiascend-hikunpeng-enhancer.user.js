@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         昇腾 / 鲲鹏积分兑换中心 - 隐藏库存不足礼品
-// @namespace    https://github.com/KaranocaVe/hiascend-rewards-userscript
-// @version      1.2.0
-// @description  同时支持昇腾社区和鲲鹏社区，隐藏库存不足礼品、自动补齐分页，并在比赛提交页勾选协议。
+// @name         昇腾 / 鲲鹏社区增强
+// @namespace    https://github.com/KaranocaVe/hiascend-hikunpeng-enhancer-userscript
+// @version      2.0.0
+// @description  昇腾与鲲鹏社区增强插件：库存过滤、分页补齐与比赛提交协议自动勾选。
 // @author       KaranocaVe
 // @match        https://www.hiascend.com/developer/rewards*
 // @match        https://www.hiascend.com/zh/developer/rewards*
@@ -20,8 +20,8 @@
 (() => {
   'use strict';
 
-  if (window.__hiascendRewardsStockFilterInstalled) return;
-  window.__hiascendRewardsStockFilterInstalled = true;
+  if (window.__hiascendKunpengEnhancerInstalled) return;
+  window.__hiascendKunpengEnhancerInstalled = true;
 
   const LIST_PATHS = new Set([
     '/ascendgateway/ascendservice/exchange/center/gift/list',
@@ -164,13 +164,14 @@
     );
   }
 
-  function isChecked(control) {
-    const input = control.matches?.('input[type="checkbox"]')
+  function getCheckboxInput(control) {
+    return control.matches?.('input[type="checkbox"]')
       ? control
       : control.querySelector?.('input[type="checkbox"]')
         || control.closest?.('label')?.querySelector('input[type="checkbox"]');
-    if (input?.checked) return true;
+  }
 
+  function hasCheckedMarker(control) {
     return [control, control.closest?.('label'), control.parentElement]
       .filter(Boolean)
       .some((element) => element.getAttribute?.('aria-checked') === 'true'
@@ -179,11 +180,24 @@
         ));
   }
 
+  function isChecked(control) {
+    const input = getCheckboxInput(control);
+    if (hasCheckedMarker(control)) return true;
+
+    // For the site's custom .o-checkbox, the native property can be changed
+    // before Vue hydration and then reset. Require the component marker there;
+    // accept the native state only for a plain-checkbox fallback.
+    const isCustomCheckbox = control.matches?.('.o-checkbox')
+      || control.closest?.('label')?.matches?.('.o-checkbox');
+    return Boolean(input?.checked && !isCustomCheckbox);
+  }
+
   function findContestAgreementControl() {
     // The current contest-submit form has a dedicated privacy box. Keeping this
     // selector scoped to that box prevents unrelated checkboxes from being touched.
     const scoped = document.querySelector(
-      '.submit .footer-box .privacy-box .o-checkbox',
+      '.submit .footer-box .privacy-box .o-checkbox, '
+      + '.footer-box .privacy-box .o-checkbox',
     );
     if (scoped) return scoped;
 
@@ -204,12 +218,17 @@
     if (!control) return false;
     if (isChecked(control)) return true;
 
-    const input = control.matches?.('input[type="checkbox"]')
-      ? control
-      : control.querySelector?.('input[type="checkbox"]')
-        || control.closest?.('label')?.querySelector('input[type="checkbox"]');
-    if (input && !input.disabled) input.click();
-    else if (!input && typeof control.click === 'function') control.click();
+    const input = getCheckboxInput(control);
+    if (!input || input.disabled) return false;
+    if (!input.checked) input.click();
+
+    // If the control appeared before Vue attached its change handler, replay
+    // the semantic events while the retry loop is active. This lets the
+    // component update its model without ever touching the submit button.
+    if (input.checked) {
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 
     return isChecked(control);
   }
@@ -218,12 +237,15 @@
     let observer = null;
     let completed = false;
     let timer = null;
+    let retryTimer = null;
 
     const disconnect = () => {
       observer?.disconnect();
       observer = null;
       if (timer !== null) window.clearTimeout(timer);
       timer = null;
+      if (retryTimer !== null) window.clearInterval(retryTimer);
+      retryTimer = null;
     };
 
     const tryCheck = () => {
@@ -236,7 +258,7 @@
       if (clickContestAgreement()) {
         completed = true;
         disconnect();
-        console.info('[rewards-stock-filter] contest submission agreement checked.');
+        console.info('[hiascend-hikunpeng-enhancer] contest submission agreement checked.');
       }
     };
 
@@ -245,6 +267,7 @@
       observer = new MutationObserver(tryCheck);
       observer.observe(document.documentElement, { childList: true, subtree: true });
       timer = window.setTimeout(disconnect, 30_000);
+      retryTimer = window.setInterval(tryCheck, 100);
       tryCheck();
     };
 
